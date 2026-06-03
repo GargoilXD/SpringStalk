@@ -1,11 +1,12 @@
 package org.gargoil.springstalk.config;
 
-import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.event.EventListener;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.dynamodb.DynamoDbClient;
@@ -33,8 +34,8 @@ public class DynamoDBConfig {
     public DynamoDbClient dynamoDbClient() {
         return DynamoDbClient.builder().region(Region.of(region)).credentialsProvider(DefaultCredentialsProvider.create()).build();
     }
-
-    @PostConstruct
+    
+    @EventListener(ApplicationReadyEvent.class)
     public void ensureTableExists() {
         DynamoDbClient ddb = dynamoDbClient();
         try {
