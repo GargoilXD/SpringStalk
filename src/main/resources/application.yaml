@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: SpringStalk
+
+version: ${VERSION:0.0.1}
+
+server:
+  port: 5000
+
+aws:
+  region: ${AWS_REGION:us-east-1}
