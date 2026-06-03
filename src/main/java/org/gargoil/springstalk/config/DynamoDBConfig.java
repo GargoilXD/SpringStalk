@@ -34,31 +34,35 @@ public class DynamoDBConfig {
     public DynamoDbClient dynamoDbClient() {
         return DynamoDbClient.builder().region(Region.of(region)).credentialsProvider(DefaultCredentialsProvider.create()).build();
     }
-    
+
     @EventListener(ApplicationReadyEvent.class)
     public void ensureTableExists() {
-        DynamoDbClient ddb = dynamoDbClient();
         try {
-            ddb.describeTable(DescribeTableRequest.builder().tableName(tableName).build());
-            log.info("DynamoDB table '{}' already exists", tableName);
-        } catch (ResourceNotFoundException notFound) {
-            log.info("DynamoDB table '{}' not found, creating...", tableName);
-            ddb.createTable(CreateTableRequest.builder()
-                    .tableName(tableName)
-                    .keySchema(KeySchemaElement.builder()
-                            .attributeName("id")
-                            .keyType(KeyType.HASH)
-                            .build())
-                    .attributeDefinitions(AttributeDefinition.builder()
-                            .attributeName("id")
-                            .attributeType(ScalarAttributeType.S)
-                            .build())
-                    .billingMode(BillingMode.PAY_PER_REQUEST)
-                    .build());
-            try (DynamoDbWaiter waiter = ddb.waiter()) {
-                waiter.waitUntilTableExists(DescribeTableRequest.builder().tableName(tableName).build());
+            DynamoDbClient ddb = dynamoDbClient();
+            try {
+                ddb.describeTable(DescribeTableRequest.builder().tableName(tableName).build());
+                log.info("DynamoDB table '{}' already exists", tableName);
+            } catch (ResourceNotFoundException notFound) {
+                log.info("DynamoDB table '{}' not found, creating...", tableName);
+                ddb.createTable(CreateTableRequest.builder()
+                        .tableName(tableName)
+                        .keySchema(KeySchemaElement.builder()
+                                .attributeName("id")
+                                .keyType(KeyType.HASH)
+                                .build())
+                        .attributeDefinitions(AttributeDefinition.builder()
+                                .attributeName("id")
+                                .attributeType(ScalarAttributeType.S)
+                                .build())
+                        .billingMode(BillingMode.PAY_PER_REQUEST)
+                        .build());
+                try (DynamoDbWaiter waiter = ddb.waiter()) {
+                    waiter.waitUntilTableExists(DescribeTableRequest.builder().tableName(tableName).build());
+                }
+                log.info("DynamoDB table '{}' is now ACTIVE", tableName);
             }
-            log.info("DynamoDB table '{}' is now ACTIVE", tableName);
+        } catch (RuntimeException e) {
+            log.error("Startup table check failed; app will continue but / will 500 until DynamoDB is reachable", e);
         }
     }
 }
