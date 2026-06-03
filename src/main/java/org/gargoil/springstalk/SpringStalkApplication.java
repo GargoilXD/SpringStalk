@@ -8,4 +8,5 @@ public class SpringStalkApplication {
     public static void main(String[] args) {
         SpringApplication.run(SpringStalkApplication.class, args);
     }
+
 }
