@@ -16,10 +16,10 @@ public class SpringStalkController {
 
     @GetMapping("/")
     public String home() {
-        log.info("GET / — handling home request");
+        log.info("GET / - handling home request");
         try {
             long visits = visitRepository.increment();
-            log.info("GET / — served (name={}, version={}, visits={})", springStalkService.getName(), springStalkService.getVersion(), visits);
+            log.info("GET / - served (name={}, version={}, visits={})", springStalkService.getName(), springStalkService.getVersion(), visits);
             return String.format(
                     "<h1>%s built with Spring Boot on Elastic Beanstalk</h1><p>Version: %s</p><p>Visits: %d</p>",
                     springStalkService.getName(),
@@ -27,7 +27,7 @@ public class SpringStalkController {
                     visits
             );
         } catch (RuntimeException e) {
-            log.error("GET / — failed to increment visit counter", e);
+            log.error("GET / - failed to increment visit counter", e);
             throw e;
         }
     }
