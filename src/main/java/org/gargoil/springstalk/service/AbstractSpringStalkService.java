@@ -4,7 +4,7 @@ import org.gargoil.springstalk.service.interfaces.SpringStalkService;
 import org.springframework.beans.factory.annotation.Value;
 
 public class AbstractSpringStalkService implements SpringStalkService {
-    @Value("${VERSION}")
+    @Value("${version:unknown}")
     private String appVersion;
 
     @Override
