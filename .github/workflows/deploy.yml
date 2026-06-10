@@ -53,12 +53,50 @@ jobs:
 
       - name: Create Elastic Beanstalk application version
         run: |
-          aws elasticbeanstalk create-application-version \
+          VERSION_LABEL=${{ steps.version.outputs.RUN_NUMBER }}
+          EXISTS=$(aws elasticbeanstalk describe-application-versions \
             --application-name ${{ secrets.EB_APP_NAME }} \
-            --version-label ${{ steps.version.outputs.RUN_NUMBER }} \
-            --source-bundle S3Bucket=${{ secrets.S3_BUCKET }},S3Key=deploy-${{ steps.version.outputs.RUN_NUMBER }}.zip
+            --version-labels "$VERSION_LABEL" \
+            --query "length(ApplicationVersions)" --output text)
+          if [ "$EXISTS" = "0" ]; then
+            aws elasticbeanstalk create-application-version \
+              --application-name ${{ secrets.EB_APP_NAME }} \
+              --version-label "$VERSION_LABEL" \
+              --source-bundle S3Bucket=${{ secrets.S3_BUCKET }},S3Key=deploy-$VERSION_LABEL.zip
+          else
+            echo "Version $VERSION_LABEL already exists — skipping create."
+          fi
+
+      - name: Create Elastic Beanstalk environment if missing
+        run: |
+          VERSION_LABEL=${{ steps.version.outputs.RUN_NUMBER }}
+          EXISTS=$(aws elasticbeanstalk describe-environments \
+            --application-name ${{ secrets.EB_APP_NAME }} \
+            --environment-names ${{ secrets.EB_ENV_NAME }} \
+            --no-include-deleted \
+            --query "length(Environments[?Status!='Terminated'])" --output text)
+          if [ "$EXISTS" = "0" ]; then
+            STACK=$(aws elasticbeanstalk list-available-solution-stacks \
+              --query "SolutionStacks[?contains(@, 'running Corretto 21')] | [0]" --output text)
+            echo "Creating environment on stack: $STACK"
+            aws elasticbeanstalk create-environment \
+              --application-name ${{ secrets.EB_APP_NAME }} \
+              --environment-name ${{ secrets.EB_ENV_NAME }} \
+              --solution-stack-name "$STACK" \
+              --version-label "$VERSION_LABEL" \
+              --option-settings \
+                Namespace=aws:elasticbeanstalk:environment,OptionName=EnvironmentType,Value=SingleInstance \
+                Namespace=aws:autoscaling:launchconfiguration,OptionName=IamInstanceProfile,Value=aws-elasticbeanstalk-ec2-role \
+                Namespace=aws:elasticbeanstalk:application:environment,OptionName=VERSION,Value=${{ steps.version.outputs.APP_VERSION }}
+            aws elasticbeanstalk wait environment-exists --environment-names ${{ secrets.EB_ENV_NAME }}
+            aws elasticbeanstalk wait environment-updated --environment-names ${{ secrets.EB_ENV_NAME }}
+            echo "BOOTSTRAPPED=1" >> $GITHUB_ENV
+          else
+            echo "Environment ${{ secrets.EB_ENV_NAME }} already exists — skipping create."
+          fi
 
       - name: Deploy to Elastic Beanstalk
+        if: env.BOOTSTRAPPED != '1'
         run: |
           aws elasticbeanstalk update-environment \
             --environment-name ${{ secrets.EB_ENV_NAME }} \
