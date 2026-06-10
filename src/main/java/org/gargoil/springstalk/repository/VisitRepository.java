@@ -32,7 +32,6 @@ public class VisitRepository {
                 .returnValues(ReturnValue.UPDATED_NEW)
                 .build()
         );
-
         return Long.parseLong(resp.attributes().get("count").n());
     }
 }
