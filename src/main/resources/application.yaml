@@ -11,3 +11,4 @@ aws:
   region: ${AWS_REGION:eu-north-1}
   dynamodb:
     table-name: ${DYNAMODB_TABLE:springstalk-visits}
+
